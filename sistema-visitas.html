@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Análise de Visitas - Curitiba Esterilização</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #2a9d8f;
+            --secondary-color: #e76f51;
+            --background-color: #f8f9fa;
+            --card-background: #ffffff;
+            --text-color: #333333;
+            --text-light: #666666;
+            --border-color: #e0e0e0;
+            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), #1d6b5f);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .sidebar {
+            background: var(--card-background);
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            height: fit-content;
+        }
+
+        .content {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .kpi-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .kpi-card {
+            background: var(--card-background);
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 0.5rem 0;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .chart-card {
+            background: var(--card-background);
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+        }
+
+        .analysis-section {
+            background: var(--card-background);
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+        }
+
+        .alert-card {
+            background: #fff3cd;
+            border: 1px solid var(--warning-color);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .alert-card.warning {
+            background: #fff3cd;
+            border-color: var(--warning-color);
+        }
+
+        .alert-card.danger {
+            background: #f8d7da;
+            border-color: var(--danger-color);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary-color);
+            transition: width 0.3s ease;
+        }
+
+        .suggestion-card {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-container">
+            <h1>📊 Sistema de Análise de Visitas - Curitiba Esterilização</h1>
+            <button class="btn btn-secondary" onclick="showDemoAlert()">🎯 Demo</button>
+        </div>
+    </header>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <h2>🔍 Filtros</h2>
+            <div style="margin: 1rem 0;">
+                <label>Período:</label>
+                <select id="period-filter" class="filter-select" style="width: 100%; padding: 0.5rem; margin: 0.5rem 0; border: 1px solid var(--border-color); border-radius: 4px;">
+                    <option value="last-month">Último Mês</option>
+                    <option value="last-quarter">Último Trimestre</option>
+                    <option value="last-year">Último Ano</option>
+                </select>
+            </div>
+            
+            <div style="margin: 1rem 0;">
+                <label>Gerentes:</label>
+                <select id="promotor-filter" class="filter-select" style="width: 100%; padding: 0.5rem; margin: 0.5rem 0; border: 1px solid var(--border-color); border-radius: 4px;">
+                    <option value="all">Todos</option>
+                    <option value="promotor1">Pablo </option>
+                    <option value="promotor2">Jocimar</option>
+                </select>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; margin: 1rem 0;" onclick="generateReport()">
+                📈 Gerar Relatório
+            </button>
+
+            <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                <h3>💡 Dica do Sistema</h3>
+                <p style="font-size: 0.9rem; color: var(--text-light); margin-top: 0.5rem;">
+                    Use os filtros para analisar a distribuição de visitas e identificar oportunidades de melhoria na cobertura de clientes.
+                </p>
+            </div>
+        </aside>
+
+        <!-- Conteúdo Principal -->
+        <main class="content">
+            <!-- KPIs -->
+            <div class="kpi-container">
+                <div class="kpi-card">
+                    <h3>Total de Visitas</h3>
+                    <div class="kpi-value" id="total-visits">0</div>
+                    <small>No período selecionado</small>
+                </div>
+                <div class="kpi-card">
+                    <h3>Clientes Visitados</h3>
+                    <div class="kpi-value" id="unique-clients">0</div>
+                    <small>Clientes únicos</small>
+                </div>
+                <div class="kpi-card">
+                    <h3>Taxa de Cobertura</h3>
+                    <div class="kpi-value" id="coverage-rate">0%</div>
+                    <small>Da base total</small>
+                </div>
+                <div class="kpi-card">
+                    <h3>Eficiência</h3>
+                    <div class="kpi-value" id="efficiency-score">0%</div>
+                    <small>Distribuição ideal</small>
+                </div>
+            </div>
+
+            <!-- Gráficos -->
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3>📊 Distribuição de Visitas por Cliente</h3>
+                    <canvas id="visitsDistributionChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>🎯 Concentração vs Cobertura</h3>
+                    <canvas id="coverageChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Análise de Concentração -->
+            <div class="analysis-section">
+                <h2>⚠️ Análise de Concentração</h2>
+                
+                <div class="alert-card warning">
+                    <h4>🔔 Alerta de Concentração</h4>
+                    <p><strong>60% das visitas</strong> estão concentradas em apenas <strong>3 clientes</strong></p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 60%;"></div>
+                    </div>
+                </div>
+
+                <div class="alert-card danger">
+                    <h4>📉 Clientes Negligenciados</h4>
+                    <p><strong>18 clientes</strong> não receberam visita há mais de 30 dias</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 35%; background: var(--danger-color);"></div>
+                    </div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Visitas</th>
+                            <th>% do Total</th>
+                            <th>Última Visita</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="concentration-table">
+                        <!-- Dados serão preenchidos pelo JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Sugestões de Otimização -->
+            <div class="analysis-section">
+                <h2>🎯 Sugestões de Otimização</h2>
+                
+                <div class="suggestion-card">
+                    <h4>🔄 Redistribuir Visitas</h4>
+                    <p>Reduzir visitas nos 3 clientes mais visitados e realocar para clientes negligenciados</p>
+                    <small>Impacto estimado: +15% de cobertura</small>
+                </div>
+
+                <div class="suggestion-card">
+                    <h4>🗺️ Otimizar Rotas</h4>
+                    <p>Agrupar visitas por região geográfica para aumentar eficiência</p>
+                    <small>Impacto estimado: +5 visitas/semana</small>
+                </div>
+
+                <div class="suggestion-card">
+                    <h4>📅 Planejamento Estratégico</h4>
+                    <p>Implementar calendário de visitas obrigatórias para clientes negligenciados</p>
+                    <small>Impacto estimado: Cobertura de 80% da base</small>
+                </div>
+
+                <button class="btn btn-primary" onclick="showOptimizationPlan()">
+                    📋 Ver Plano Detalhado
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Dados de demonstração
+        const demoData = {
+            totalVisits: 156,
+            uniqueClients: 28,
+            totalClients: 67,
+            visitsDistribution: [
+                { client: 'Hospital Santa Clara', visits: 42, percentage: 27, lastVisit: '2024-01-15', status: 'Excesso' },
+                { client: 'Clínica São Lucas', visits: 28, percentage: 18, lastVisit: '2024-01-18', status: 'Excesso' },
+                { client: 'Maternidade Esperança', visits: 24, percentage: 15, lastVisit: '2024-01-20', status: 'Excesso' },
+                { client: 'Laboratório Central', visits: 18, percentage: 12, lastVisit: '2024-01-22', status: 'Adequado' },
+                { client: 'Centro Médico Alfa', visits: 15, percentage: 10, lastVisit: '2024-01-25', status: 'Adequado' },
+                { client: 'Outros 23 clientes', visits: 29, percentage: 18, lastVisit: 'Varia', status: 'Adequado' }
+            ],
+            neglectedClients: [
+                'Consultório Delta', 'Clínica Omega', 'Hospital Beta', 'Unidade Gama',
+                'Ambulatório Zeta', 'Laboratório Theta', 'Posto Iota', 'Centro Kappa'
+            ]
+        };
+
+        // Inicialização do dashboard
+        function initDashboard() {
+            updateKPIs();
+            renderCharts();
+            renderConcentrationTable();
+        }
+
+        // Atualizar KPIs
+        function updateKPIs() {
+            document.getElementById('total-visits').textContent = demoData.totalVisits;
+            document.getElementById('unique-clients').textContent = demoData.uniqueClients;
+            
+            const coverageRate = Math.round((demoData.uniqueClients / demoData.totalClients) * 100);
+            document.getElementById('coverage-rate').textContent = coverageRate + '%';
+            
+            const efficiency = 100 - Math.round((demoData.visitsDistribution[0].percentage + demoData.visitsDistribution[1].percentage + demoData.visitsDistribution[2].percentage) / 3);
+            document.getElementById('efficiency-score').textContent = efficiency + '%';
+        }
+
+        // Renderizar gráficos
+        function renderCharts() {
+            // Gráfico de distribuição
+            const distributionCtx = document.getElementById('visitsDistributionChart').getContext('2d');
+            new Chart(distributionCtx, {
+                type: 'bar',
+                data: {
+                    labels: demoData.visitsDistribution.map(item => item.client),
+                    datasets: [{
+                        label: 'Número de Visitas',
+                        data: demoData.visitsDistribution.map(item => item.visits),
+                        backgroundColor: [
+                            '#e76f51', '#e76f51', '#e76f51',
+                            '#2a9d8f', '#2a9d8f', '#264653'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'Distribuição de Visitas por Cliente' }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Número de Visitas' } }
+                    }
+                }
+            });
+
+            // Gráfico de cobertura
+            const coverageCtx = document.getElementById('coverageChart').getContext('2d');
+            new Chart(coverageCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Clientes Visitados', 'Clientes Não Visitados'],
+                    datasets: [{
+                        data: [demoData.uniqueClients, demoData.totalClients - demoData.uniqueClients],
+                        backgroundColor: ['#2a9d8f', '#e9ecef'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        title: { display: true, text: 'Cobertura da Base de Clientes' }
+                    }
+                }
+            });
+        }
+
+        // Renderizar tabela de concentração
+        function renderConcentrationTable() {
+            const tableBody = document.getElementById('concentration-table');
+            tableBody.innerHTML = '';
+
+            demoData.visitsDistribution.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.client}</td>
+                    <td>${item.visits}</td>
+                    <td>${item.percentage}%</td>
+                    <td>${new Date(item.lastVisit).toLocaleDateString('pt-BR')}</td>
+                    <td><span style="color: ${item.status === 'Excesso' ? '#e76f51' : '#2a9d8f'}">${item.status}</span></td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Gerar relatório
+        function generateReport() {
+            alert('📊 Relatório gerado com sucesso!\n\n' +
+                  `Total de Visitas: ${demoData.totalVisits}\n` +
+                  `Clientes Únicos: ${demoData.uniqueClients}\n` +
+                  `Taxa de Cobertura: ${Math.round((demoData.uniqueClients / demoData.totalClients) * 100)}%\n` +
+                  `Clientes Negligenciados: ${demoData.neglectedClients.length}`);
+        }
+
+        // Mostrar plano de otimização
+        function showOptimizationPlan() {
+            const plan = `
+🎯 PLANO DE OTIMIZAÇÃO - CURITIBA ESTERILIZAÇÃO
+
+1. REDISTRIBUIÇÃO DE VISITAS:
+   • Reduzir Hospital Santa Clara: 42 → 25 visitas/mês
+   • Reduzir Clínica São Lucas: 28 → 18 visitas/mês  
+   • Reduzir Maternidade Esperança: 24 → 15 visitas/mês
+   • Realocar 36 visitas para clientes negligenciados
+
+2. EXPANSÃO DE COBERTURA:
+   • Visitar 8 clientes negligenciados prioritários
+   • Aumentar cobertura de 42% para 65%
+   • Meta: 45 clientes únicos/mês
+
+3. OTIMIZAÇÃO DE ROTAS:
+   • Agrupar por região geográfica
+   • Reduzir tempo de deslocamento em 30%
+   • Aumentar capacidade: +5 visitas/semana
+
+IMPACTO ESPERADO:
+✓ Cobertura: +23%
+✓ Eficiência: +35% 
+✓ Novos negócios: +15%
+            `;
+            alert(plan);
+        }
+
+        // Demo alert
+        function showDemoAlert() {
+            alert('🎯 SISTEMA DE ANÁLISE DE VISITAS\n\n' +
+                  'Este é um sistema demonstrativo que mostra:\n\n' +
+                  '• 📊 Análise de distribuição de visitas\n' +
+                  '• ⚠️ Alertas de concentração em poucos clientes\n' +
+                  '• 🎯 Sugestões para otimizar a cobertura\n' +
+                  '• 📈 Métricas de eficiência e desempenho\n\n' +
+                  'Desenvolvido para a Curitiba Esterilização');
+        }
+
+        // Inicializar quando a página carregar
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>
