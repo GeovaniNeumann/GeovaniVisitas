@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise de Visitas - Curitiba Esterilização</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #2a9d8f;
+            --accent-green: #21c0ad;
+            --bg-dark: rgba(0, 0, 0, 0.85);
+            --glass: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --warning: #e76f51;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(var(--bg-dark), var(--bg-dark)), 
+                        url('https://i.ibb.co/pjVK1YrY/Design-sem-nome-22.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: white;
+        }
+
+        header {
+            background: white;
+            padding: 0.8rem;
+            display: flex;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .logo { height: 60px; }
+
+        .container { max-width: 1400px; margin: auto; padding: 2rem; }
+
+        .hero-section { text-align: center; margin-bottom: 2rem; }
+        .hero-section h1 { font-weight: 300; letter-spacing: 1px; text-transform: uppercase; }
+
+        /* KPI Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 2rem;
+        }
+
+        .card-stat {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            padding: 1.5rem;
+            border-radius: 15px;
+            border-left: 4px solid var(--primary-color);
+            text-align: center;
+        }
+
+        .card-stat p { font-size: 0.7rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
+        .card-stat h2 { font-size: 2rem; margin: 5px 0; color: var(--accent-green); }
+
+        /* Layout Principal */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 25px;
+        }
+
+        .glass-panel {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+        }
+
+        /* AJUSTE DOS CAMPOS SELECT (Remove o fundo branco) */
+        select {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid var(--glass-border);
+            color: white !important;
+            border-radius: 8px;
+            margin-top: 5px;
+            cursor: pointer;
+            appearance: none; /* Remove a seta padrão do navegador */
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+        }
+
+        /* Cor das opções dentro do select */
+        select option {
+            background-color: #1a1a1a;
+            color: white;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        /* Charts */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            background: rgba(255,255,255,0.03);
+            border-radius: 15px;
+            padding: 1rem;
+            height: 300px;
+        }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9rem; }
+        th { text-align: left; padding: 12px; border-bottom: 1px solid var(--glass-border); color: var(--primary-color); }
+        td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+        .alert-box {
+            background: rgba(231, 111, 81, 0.15);
+            border: 1px solid var(--warning);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn-action {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.8rem;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .btn-action:hover { background: var(--accent-green); transform: translateY(-2px); }
+
+        @media (max-width: 1000px) {
+            .main-layout { grid-template-columns: 1fr; }
+            .chart-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <img src="https://i.ibb.co/MdtYrsZ/Captura-de-tela-2025-10-14-173640-removebg-preview.png" alt="Curitiba Esterilização" class="logo">
+    </header>
+
+    <div class="container">
+        <div class="hero-section">
+            <h1>Análise Estratégica de <span style="font-weight: 700;">Visitas</span></h1>
+        </div>
+
+        <div class="stats-grid">
+            <div class="card-stat">
+                <p>Total de Visitas</p>
+                <h2 id="total-visits">156</h2>
+            </div>
+            <div class="card-stat">
+                <p>Clientes Únicos</p>
+                <h2 id="unique-clients">28</h2>
+            </div>
+            <div class="card-stat">
+                <p>Taxa de Cobertura</p>
+                <h2 id="coverage-rate">42%</h2>
+            </div>
+            <div class="card-stat">
+                <p>Eficiência</p>
+                <h2 id="efficiency-score">72%</h2>
+            </div>
+        </div>
+
+        <div class="main-layout">
+            <aside class="glass-panel">
+                <h3 style="margin-bottom: 1.5rem;"><i class="fas fa-filter"></i> Filtros</h3>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="font-size: 0.8rem; color: var(--primary-color); font-weight: bold;">PERÍODO</label>
+                    <select>
+                        <option>Último Mês</option>
+                        <option>Último Trimestre</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 2rem;">
+                    <label style="font-size: 0.8rem; color: var(--primary-color); font-weight: bold;">GERENTE</label>
+                    <select>
+                        <option>Todos</option>
+                        <option>Pablo</option>
+                        <option>Jocimar</option>
+                    </select>
+                </div>
+
+                <button class="btn-action" onclick="alert('Relatório Atualizado!')">GERAR RELATÓRIO</button>
+
+                <div style="margin-top: 2rem; font-size: 0.8rem; opacity: 0.6;">
+                    <p><i class="fas fa-lightbulb" style="color: var(--primary-color);"></i> 60% das visitas estão concentradas em apenas 3 clientes.</p>
+                </div>
+            </aside>
+
+            <section>
+                <div class="chart-grid">
+                    <div class="glass-panel">
+                        <h4 style="margin-bottom: 1rem;">Distribuição por Cliente</h4>
+                        <div class="chart-container">
+                            <canvas id="visitsDistributionChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="glass-panel">
+                        <h4 style="margin-bottom: 1rem;">Cobertura de Base</h4>
+                        <div class="chart-container">
+                            <canvas id="coverageChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel">
+                    <div class="alert-box">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 1.5rem; color: var(--warning);"></i>
+                        <div>
+                            <h4 style="color: var(--warning);">Atenção: Concentração Alta</h4>
+                            <p style="font-size: 0.85rem; opacity: 0.8;">18 clientes não recebem visita há mais de 30 dias. Recomendamos redistribuição imediata.</p>
+                        </div>
+                    </div>
+
+                    <h4 style="margin: 1.5rem 0 1rem;">Detalhamento de Concentração</h4>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Visitas</th>
+                                <th>% Total</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="concentration-table"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const chartColors = {
+            primary: '#2a9d8f',
+            warning: '#e76f51',
+            text: '#ffffff',
+            glass: 'rgba(255,255,255,0.1)'
+        };
+
+        function renderCharts() {
+            const distCtx = document.getElementById('visitsDistributionChart').getContext('2d');
+            new Chart(distCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Hosp. Sta Clara', 'Clin. S. Lucas', 'Mat. Esperança', 'Lab. Central', 'Outros'],
+                    datasets: [{
+                        data: [42, 28, 24, 18, 44],
+                        backgroundColor: [chartColors.warning, chartColors.warning, chartColors.warning, chartColors.primary, chartColors.primary]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: chartColors.glass }, ticks: { color: chartColors.text } },
+                        x: { ticks: { color: chartColors.text } }
+                    }
+                }
+            });
+
+            const coverageCtx = document.getElementById('coverageChart').getContext('2d');
+            new Chart(coverageCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Visitados', 'Não Visitados'],
+                    datasets: [{
+                        data: [28, 39],
+                        backgroundColor: [chartColors.primary, chartColors.glass],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: chartColors.text } } }
+                }
+            });
+        }
+
+        function fillTable() {
+            const data = [
+                { name: 'Hospital Santa Clara', visits: 42, perc: '27%', status: 'Excesso' },
+                { name: 'Clínica São Lucas', visits: 28, perc: '18%', status: 'Excesso' },
+                { name: 'Maternidade Esperança', visits: 24, perc: '15%', status: 'Alerta' }
+            ];
+            const table = document.getElementById('concentration-table');
+            table.innerHTML = data.map(item => `
+                <tr>
+                    <td>${item.name}</td>
+                    <td>${item.visits}</td>
+                    <td>${item.perc}</td>
+                    <td style="color: ${item.status === 'Excesso' ? '#e76f51' : '#ffc107'}">${item.status}</td>
+                </tr>
+            `).join('');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCharts();
+            fillTable();
+        });
+    </script>
+</body>
+</html>
